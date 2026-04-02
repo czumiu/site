@@ -1,0 +1,2257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>tracerboard</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='4' fill='white'/%3E%3C/svg%3E" />
+<style>
+:root{
+    --bg:#17181c;
+    --panel:#23262d;
+    --panel2:#2b2f38;
+    --text:#e8ebf2;
+    --muted:#aab2c3;
+    --border:#3b404c;
+    --accent:#6ea8fe;
+    --tool-color:#111111;
+
+    --space-1:4px;
+    --space-2:8px;
+    --space-3:12px;
+    --space-4:16px;
+
+    --radius-sm:8px;
+    --radius-md:12px;
+    --radius-lg:16px;
+
+    --toolbar-btn:40px;
+    --tool-card-h:64px;
+    --secondary-card-h:64px;
+    --number-sm:64px;
+    --number-md:80px;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{
+    background:var(--bg);
+    color:var(--text);
+    font:14px/1.4 system-ui,Segoe UI,Roboto,Arial,sans-serif;
+    display:grid;
+    grid-template-columns:320px 1fr;
+    overflow:hidden;
+}
+aside{
+    background:linear-gradient(180deg,var(--panel),var(--panel2));
+    border-right:1px solid var(--border);
+    padding:var(--space-4);
+    overflow:auto;
+}
+main{
+    min-width:0;
+    min-height:0;
+    display:grid;
+    grid-template-rows:auto 1fr auto;
+}
+.topbar,.bottombar{
+    padding:var(--space-3) var(--space-4);
+    border-bottom:1px solid var(--border);
+    background:rgba(255,255,255,.03);
+}
+.topbar{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+.topbar-left{
+    display:flex;
+    gap:var(--space-2);
+}
+.topbar-right{
+    display:flex;
+}
+.topbar button{
+    padding:var(--space-2) var(--space-3);
+}
+.topbar .icon-btn{
+    width:var(--toolbar-btn);
+    height:var(--toolbar-btn);
+    padding:0;
+    display:grid;
+    place-items:center;
+}
+.topbar .icon-btn svg{
+    width:20px;
+    height:20px;
+    display:block;
+}
+.topbar .icon-btn.danger{
+    margin-left:8px;
+}
+
+.bottombar{
+    border-top:1px solid var(--border);
+    border-bottom:none;
+    display:flex;
+    justify-content:space-between;
+    gap:var(--space-3);
+    flex-wrap:wrap;
+    color:var(--muted);
+}
+.canvas-wrap{
+    min-width:0;
+    min-height:0;
+    overflow:auto;
+    background:#15171c;
+    padding:var(--space-3);
+    cursor:default;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    touch-action:none;
+}
+.canvas-wrap.eyedropper{
+    cursor:crosshair;
+}
+.canvas-wrap.spacepan{
+    cursor:grab;
+}
+.canvas-wrap.spacepan.dragging{
+    cursor:grabbing;
+}
+.canvas-wrap.navigating{ cursor:grab; }
+.canvas-wrap.navigating.dragging{ cursor:grabbing; }
+.canvas-stage{
+    width:100%;
+    max-width:none;
+    background:#101216;
+    border:1px solid var(--border);
+    border-radius:var(--radius-lg);
+    box-shadow:0 12px 40px rgba(0,0,0,.28);
+    flex:0 0 auto;
+}
+svg{
+    display:block;
+    width:100%;
+    height:auto;
+    background:#ffffff20;
+    border-radius:var(--radius-md);
+    user-select:none;
+    touch-action:none;
+}
+.section{
+    margin-bottom:var(--space-4);
+    padding:0;
+    border:none;
+    border-radius:0;
+    background:transparent;
+}
+.section h3{
+    display:none;
+}
+.stack{display:grid;gap:8px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tool-stack{
+    display:grid;
+    gap:var(--space-3);
+    margin-bottom:var(--space-3);
+}
+.tool-card{
+    display:grid;
+    gap:var(--space-2);
+}
+.tool-secondary{
+    display:grid;
+    gap:var(--space-3);
+}
+.secondary-btn{
+    min-height:var(--secondary-card-h);
+    position:relative;
+    overflow:hidden;
+    padding:0;
+    margin:0;
+    line-height:0;
+    display:block;
+}
+.secondary-btn svg{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    display:block;
+}
+.secondary-btn .tool-key{
+    display:none;
+}
+.tool-slider-row{
+    display:grid;
+    grid-template-columns:1fr var(--number-sm);
+    gap:var(--space-2);
+    align-items:center;
+}
+.tool-slider-row input[type="number"]{
+    width:100%;
+}
+
+button,input[type="color"]{
+    appearance:none;
+    border:1px solid var(--border);
+    background:#303541;
+    color:var(--text);
+    border-radius:var(--radius-md);
+    padding:var(--space-3);
+    cursor:pointer;
+    font:inherit;
+}
+.tool-btn{
+    min-height:var(--tool-card-h);
+    position:relative;
+    overflow:hidden;
+    padding:0;
+    margin:0;
+    line-height:0;
+    display:block;
+}
+.tool-btn svg{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    display:block;
+}
+.tool-btn .tool-key{
+    display:none;
+}
+.tool-btn::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:linear-gradient(135deg, rgba(255,255,255,.05), rgba(255,255,255,0));
+    pointer-events:none;
+}
+.color-chip{
+    min-height:var(--secondary-card-h);
+    padding:var(--space-3) var(--space-4);
+    position:relative;
+    display:flex;
+    align-items:center;
+    justify-content:flex-start;
+    overflow:hidden;
+}
+.color-chip svg{
+    width:100%;
+    height:34px;
+    display:block;
+}
+.color-chip .tool-key{
+    display:none;
+}
+.visually-hidden{
+    position:absolute !important;
+    width:1px;height:1px;
+    padding:0;margin:-1px;
+    overflow:hidden;clip:rect(0,0,0,0);
+    white-space:nowrap;border:0;
+}
+button:hover{background:#3a4150}
+button.active{
+    border-color:var(--tool-color);
+    outline:2px solid var(--tool-color);
+    box-shadow:0 0 0 2px color-mix(in srgb, var(--tool-color) 28%, transparent) inset;
+}
+button:disabled{
+    opacity:.45;
+    cursor:not-allowed;
+}
+label{display:grid;gap:6px;color:var(--muted)}
+.value-row{
+    display:grid;
+    grid-template-columns:1fr var(--number-md);
+    gap:var(--space-2);
+    align-items:center;
+}
+input[type="range"]{width:100%}
+input[type="number"]{
+    width:100%;
+    appearance:textfield;
+    border:1px solid var(--border);
+    background:#303541;
+    color:var(--text);
+    border-radius:var(--radius-md);
+    padding:var(--space-2) var(--space-3);
+    font:inherit;
+}
+.color-picker-panel{
+    margin-top:12px;
+    padding:var(--space-3);
+    border:1px solid var(--border);
+    border-radius:var(--radius-md);
+    background:#2a2f39;
+}
+.color-picker-panel.active{
+    border-color:var(--tool-color);
+    outline:2px solid var(--tool-color);
+    box-shadow:0 0 0 2px color-mix(in srgb, var(--tool-color) 28%, transparent) inset;
+}
+.color-picker-wrap{
+    position:relative;
+    width:100%;
+    aspect-ratio:1 / 1;
+}
+#colorCanvas{
+    display:block;
+    width:100%;
+    height:100%;
+    border-radius:var(--radius-sm);
+    border:1px solid rgba(255,255,255,.18);
+    cursor:crosshair;
+    touch-action:none;
+}
+#colorMarker{
+    position:absolute;
+    width:12px;
+    height:12px;
+    border:2px solid #fff;
+    border-radius:999px;
+    box-shadow:0 0 0 1px rgba(0,0,0,.8);
+    pointer-events:none;
+    transform:translate(-50%, -50%);
+}
+.color-value-row{
+    margin-top:var(--space-3);
+    display:grid;
+    grid-template-columns:1fr var(--number-sm);
+    gap:var(--space-2);
+    align-items:center;
+}
+#valueSlider{
+    width:100%;
+}
+.palette-grid{
+    margin-top:var(--space-3);
+    display:grid;
+    grid-template-columns:repeat(4, 1fr);
+    gap:var(--space-2);
+}
+.palette-swatch{
+    aspect-ratio:1 / 1;
+    height:auto;
+    min-height:32px;
+    border-radius:8px;
+    border:none;
+    padding:0;
+    box-shadow:none;
+    position:relative;
+}
+.palette-swatch:hover{
+    transform:translateY(-1px);
+}
+.palette-swatch.active{
+    outline:none;
+}
+.memory-swatch svg{
+    position:absolute;
+    left:50%;
+    top:50%;
+    width:20px;
+    height:20px;
+    transform:translate(-50%, -50%);
+    pointer-events:none;
+}
+small{color:var(--muted)}
+.kbd{
+    display:inline-block;
+    min-width:1.75em;
+    text-align:center;
+    padding:2px 6px;
+    border:1px solid var(--border);
+    border-radius:var(--radius-sm);
+    background:#2c313c;
+    color:#dbe4ff;
+}
+.good{color:#9ad17b}
+.warn{color:#ffcb6b}
+
+
+.color-picker-panel .tool-slider-row{
+    margin-top:var(--space-3);
+}
+
+
+svg, image{
+    -webkit-user-drag:none;
+    user-drag:none;
+}
+
+
+.focus-exit{
+    position:fixed;
+    top:var(--space-3);
+    left:var(--space-3);
+    z-index:100;
+    width:var(--toolbar-btn);
+    height:var(--toolbar-btn);
+    padding:0;
+    display:none;
+    place-items:center;
+}
+.focus-exit svg{
+    width:20px;
+    height:20px;
+    display:block;
+}
+body.focus-mode{
+    grid-template-columns:1fr;
+}
+body.focus-mode aside,
+body.focus-mode .topbar,
+body.focus-mode .bottombar{
+    display:none;
+}
+body.focus-mode main{
+    grid-template-rows:1fr;
+}
+body.focus-mode .focus-exit{
+    display:grid;
+}
+
+</style>
+</head>
+<body>
+<aside>
+    <div class="section">
+        
+        <div class="tool-stack">
+            <div class="tool-card">
+                <button id="toolDraw" class="tool-btn active" title="Draw (D)">
+<svg width="220" height="64" viewBox="0 0 220 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <defs>
+    <linearGradient id="drawGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#4fc3ff"/>
+      <stop offset="100%" stop-color="#0f7dff"/>
+    </linearGradient>
+  </defs>
+
+  <path id="markerTipPath" fill="#d11a2a" d="M204 32c-6-6-12-6-12-6v12s6 0 12-6"/>
+  <path fill="#ffffff"
+        d="M0 16v32h164a11.045 11.045 0 0 0 12-10h16V26h-16a11.045 11.045 0 0 0-12-10Z"/>
+  <path id = "markerColor" fill="#000" d="M16 16h144v32H16z"/>
+  <path fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+        d="M0 16v32h164a11.045 11.045 0 0 0 12-10h16V26h-16a11.045 11.045 0 0 0-12-10Z"/>
+  <path style="fill:none;stroke:#fff;stroke-width:4;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none" d="M152 32h-16m12-6.928-8 13.856m0-13.856 8 13.856"/>
+    </svg>
+                    <span class="tool-key">D</span>
+                </button>
+                <div class="tool-slider-row">
+                    <input id="toolMarkerSize" title="Marker size (pixels). Shortcut: hold S and scroll." type="range" min="1" max="32" value="3" />
+                    <input id="toolMarkerSizeNumber" title="Marker size (pixels)." type="number" min="1" max="32" value="3" />
+                </div>
+            </div>
+
+            <div class="tool-card">
+                <button id="toolEraser" class="tool-btn" title="Eraser (E)">
+                   <svg width="220" height="64" viewBox="0 0 220 64" xml:space="preserve" xmlns="http://www.w3.org/2000/svg">
+  <rect style="fill:#333;fill-opacity:1;stroke:#000;stroke-width:4;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none" width="192" height="44" x="14" y="8" ry="4"/>
+  <path style="fill:#333;fill-opacity:1;stroke:#000;stroke-width:4;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none" d="M14 56h192"/>
+</svg>
+
+                    <span class="tool-key">E</span>
+                </button>
+                <div class="tool-slider-row">
+                    <input id="toolEraserRadius" title="Eraser radius (pixels)." type="range" min="8" max="200" value="50" />
+                    <input id="toolEraserRadiusNumber" title="Eraser radius (pixels)." type="number" min="8" max="200" value="50" />
+                </div>
+            </div>
+
+            <div class="tool-card">
+                <div id="colorPickerPanel" class="color-picker-panel" title="Custom Color (C)">
+                    <input id="colorPicker" class="visually-hidden" type="color" value="#d11a2a" />
+                    <div class="color-picker-wrap">
+                        <canvas id="colorCanvas" width="320" height="320"></canvas>
+                        <div id="colorMarker"></div>
+                    </div>
+                    <div class="tool-slider-row">
+                        <input id="valueSlider" title="Color brightness." type="range" min="0" max="100" value="100" />
+                        <input id="valueNumber" title="Color brightness." type="number" min="0" max="100" value="100" />
+                    </div>
+                    <div id="paletteGrid" class="palette-grid">
+                        <button class="palette-swatch" data-color="#d11a2a" title="Palette color #d11a2a" style="background:#d11a2a"></button>
+                        <button class="palette-swatch" data-color="#ff8a00" title="Palette color #ff8a00" style="background:#ff8a00"></button>
+                        <button class="palette-swatch" data-color="#ffd400" title="Palette color #ffd400" style="background:#ffd400"></button>
+                        <button class="palette-swatch" data-color="#2bb673" title="Palette color #2bb673" style="background:#2bb673"></button>
+                        <button class="palette-swatch" data-color="#00cfe8" title="Palette color #00cfe8" style="background:#00cfe8"></button>
+                        <button class="palette-swatch" data-color="#00a6fb" title="Palette color #00a6fb" style="background:#00a6fb"></button>
+                        <button class="palette-swatch" data-color="#ff3dbf" title="Palette color #ff3dbf" style="background:#ff3dbf"></button>
+                        <button id="memorySwatch" class="palette-swatch memory-swatch" data-color="#111111" title="Custom color memory" style="background:#111111">
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M15.7 3.3a2.7 2.7 0 0 1 3.8 3.8l-2 2-3.8-3.8 2-2Zm-3 3-8.5 8.5L3 20.9l6.1-1.2 8.5-8.5-4.9-4.9Z" fill="none" stroke="rgba(255,255,255,.95)" stroke-width="1.8" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tool-card">
+                <button id="imageActionBtn" class="secondary-btn" title="Import image or toggle image layer (T)">
+                    <svg id="imageActionIcon" viewBox="0 0 220 64" aria-hidden="true">
+                        <rect x="4" y="12" width="60" height="34" rx="3" fill="none" stroke="currentColor" stroke-width="2"/>
+                        <circle cx="22" cy="24" r="3" fill="currentColor"/>
+                        <path d="M8 40 L24 29 L34 35 L50 21 L60 21 L60 40 Z" fill="currentColor"/>
+                        <path d="M82 32 H182" stroke="rgba(255,255,255,.18)" stroke-width="4" stroke-linecap="round"/>
+                    </svg>
+                    <span class="tool-key">T</span>
+                </button>
+                <div class="tool-slider-row">
+                    <input id="toolImageOpacity" title="Reference image opacity." type="range" min="0" max="100" value="35" />
+                    <input id="toolImageOpacityNumber" title="Reference image opacity." type="number" min="0" max="100" value="35" />
+                </div>
+            </div>
+        </div>
+    </div>
+    </div>
+
+
+    <input id="imageFileInput" type="file" accept="image/*" style="display:none" />
+</aside>
+
+<main>
+    <button id="focusExitBtn" class="icon-btn focus-exit" title="Exit focus mode" aria-label="Exit focus mode">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M10 4 V10 H4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M14 4 V10 H20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M10 20 V14 H4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M14 20 V14 H20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+    </button>
+    <div class="topbar">
+    <div class="topbar-left">
+        <button id="focusModeTopBtn" class="icon-btn" title="Focus mode" aria-label="Focus mode">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M9 4 H4 V9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M15 4 H20 V9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M9 20 H4 V15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M15 20 H20 V15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </button>
+<button id="undoTopBtn" class="icon-btn" title="Undo (Ctrl+Z)" aria-label="Undo">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M9 7 L4 12 L9 17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M5 12 H14 C18 12 20 14 20 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+        </button>
+        <button id="redoTopBtn" class="icon-btn" title="Redo (Ctrl+Y / Ctrl+Shift+Z)" aria-label="Redo">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M15 7 L20 12 L15 17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M19 12 H10 C6 12 4 14 4 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+        </button>
+        <button id="resetViewTopBtn" class="icon-btn" title="Reset View" aria-label="Reset View">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 3 V9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <path d="M9.5 6.5 L12 9 L14.5 6.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M21 12 H15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <path d="M17.5 9.5 L15 12 L17.5 14.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M12 21 V15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <path d="M9.5 17.5 L12 15 L14.5 17.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M3 12 H9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <path d="M6.5 9.5 L9 12 L6.5 14.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </button>
+        
+        <button id="exportTopBtn" class="icon-btn" title="Export SVG" aria-label="Export SVG">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 4 V15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <path d="M8 11 L12 15 L16 11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M5 19 H19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+        </button>
+    </div>
+    <div class="topbar-right">
+        <button id="clearTopBtn" class="icon-btn danger" title="Clear All" aria-label="Clear All">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M5 7 H19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <path d="M9 7 V5 H15 V7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <rect x="7" y="7" width="10" height="12" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/>
+            </svg>
+        </button>
+    </div>
+</div>
+    <div id="canvasWrap" class="canvas-wrap">
+        <div id="sizeHud" style="position:fixed;display:none;padding:6px 10px;border:1px solid #3b404c;border-radius:10px;background:rgba(35,38,45,.92);color:#e8ebf2;font:12px system-ui,Segoe UI,Roboto,Arial,sans-serif;pointer-events:none;z-index:9999"></div>
+        <div class="canvas-stage">
+            <svg id="svg" width="1100" height="700" viewBox="0 0 1100 700" xmlns="http://www.w3.org/2000/svg">
+                <g id="referenceLayer"></g>
+                <g id="pathLayer"></g>
+                <g id="overlayLayer"></g>
+            </svg>
+        </div>
+    </div>
+    <div class="bottombar">
+        <div id="statusText">Ready.</div>
+        <div id="statsText">0 paths</div>
+    </div>
+</main>
+
+<script>
+(() => {
+    const SVG_NS = "http://www.w3.org/2000/svg";
+    const BASE_WIDTH = 1100;
+    const BASE_HEIGHT = 700;
+
+    // World-space model:
+    // - strokes are stored as point arrays in SVG/world coordinates
+    // - the camera is the current SVG viewBox
+    // - rendering/export derive curves from stored points
+    const state = {
+        tool: "draw",
+        markerSize: 3,
+        sampleSpacingPx: 2,
+        simplifyTolerance: 2,
+        eraserRadius: 50,
+        shaveGap: 2,
+        activeColor: "#d11a2a",
+
+        pointerDown: false,
+        drawing: false,
+        erasing: false,
+        eyedropperArmed: false,
+        spacePanArmed: false,
+
+        currentPoints: [],
+        paths: [],
+        history: [],
+        historyIndex: -1,
+        cursor: { x: 0, y: 0, inside: false },
+
+        camera: {
+            x: 0,
+            y: 0,
+            width: BASE_WIDTH,
+            height: BASE_HEIGHT,
+            minWidth: 60,
+            maxWidth: BASE_WIDTH * 2
+        },
+
+        navigation: {
+            panning: false,
+            panStartCamera: null,
+            panStartClient: null
+        },
+
+        colorUi: {
+            x: 0.0,
+            y: 1.0,
+            value: 1.0
+        },
+
+        referenceImage: {
+            src: null,
+            opacity: 0.35,
+            onTop: false,
+            width: 0,
+            height: 0,
+            samplerCanvas: null,
+            samplerCtx: null,
+        }
+    };
+
+    const el = {
+        svg: document.getElementById("svg"),
+        canvasWrap: document.getElementById("canvasWrap"),
+        canvasStage: document.querySelector(".canvas-stage"),
+        referenceLayer: document.getElementById("referenceLayer"),
+        pathLayer: document.getElementById("pathLayer"),
+        overlayLayer: document.getElementById("overlayLayer"),
+        sizeHud: document.getElementById("sizeHud"),
+        statusText: document.getElementById("statusText"),
+        statsText: document.getElementById("statsText"),
+
+        toolDraw: document.getElementById("toolDraw"),
+        toolEraser: document.getElementById("toolEraser"),
+        markerTipPath: document.getElementById("markerTipPath"),
+        markerColor: document.getElementById("markerColor"),
+        colorPickerPanel: document.getElementById("colorPickerPanel"),
+        colorCanvas: document.getElementById("colorCanvas"),
+        colorMarker: document.getElementById("colorMarker"),
+        valueSlider: document.getElementById("valueSlider"),
+        valueNumber: document.getElementById("valueNumber"),
+        paletteGrid: document.getElementById("paletteGrid"),
+        memorySwatch: document.getElementById("memorySwatch"),
+        imageActionBtn: document.getElementById("imageActionBtn"),
+        imageActionIcon: document.getElementById("imageActionIcon"),
+
+        markerSize: document.getElementById("toolMarkerSize"),
+        markerSizeNumber: document.getElementById("toolMarkerSizeNumber"),
+        eraserRadius: document.getElementById("toolEraserRadius"),
+        eraserRadiusNumber: document.getElementById("toolEraserRadiusNumber"),
+        colorPicker: document.getElementById("colorPicker"),
+
+        imageOpacity: document.getElementById("toolImageOpacity"),
+        imageOpacityNumber: document.getElementById("toolImageOpacityNumber"),
+        imageFileInput: document.getElementById("imageFileInput"),
+
+        undoBtn: document.getElementById("undoTopBtn"),
+        redoBtn: document.getElementById("redoTopBtn"),
+        resetViewBtn: document.getElementById("resetViewTopBtn"),
+        focusModeBtn: document.getElementById("focusModeTopBtn"),
+        focusExitBtn: document.getElementById("focusExitBtn"),
+        clearBtn: document.getElementById("clearTopBtn"),
+        exportBtn: document.getElementById("exportTopBtn")
+    };
+
+    function setStatus(text, cls = "") {
+        el.statusText.className = cls;
+        el.statusText.textContent = text;
+    }
+
+    function updateStats() {
+        const points = state.paths.reduce((sum, p) => sum + p.points.length, 0);
+        el.statsText.textContent = `${state.paths.length} paths • ${points} points • ${Math.round((BASE_WIDTH / state.camera.width) * 100)}%`;
+        el.undoBtn.disabled = state.historyIndex <= 0;
+        el.redoBtn.disabled = state.historyIndex >= state.history.length - 1;
+    }
+
+    function syncControlValues() {
+        el.markerSize.value = state.markerSize;
+        el.markerSizeNumber.value = state.markerSize;
+        el.eraserRadius.value = state.eraserRadius;
+        el.eraserRadiusNumber.value = state.eraserRadius;
+        el.valueSlider.value = Math.round(state.colorUi.value * 100);
+        el.valueNumber.value = Math.round(state.colorUi.value * 100);
+        document.documentElement.style.setProperty("--chip-color", state.activeColor);
+        document.documentElement.style.setProperty("--tool-color", state.activeColor);
+        if (el.markerTipPath) {
+            el.markerTipPath.setAttribute("fill", state.activeColor);
+        }
+        if (el.markerColor) {
+            el.markerColor.setAttribute("fill", state.activeColor);
+        }
+    }
+
+    function mixRgb(a, b, t) {
+        return {
+            r: a.r + (b.r - a.r) * t,
+            g: a.g + (b.g - a.g) * t,
+            b: a.b + (b.b - a.b) * t
+        };
+    }
+
+    function hsvToRgb(h, s, v) {
+        let r = 0, g = 0, b = 0;
+        const i = Math.floor(h * 6);
+        const f = h * 6 - i;
+        const p = v * (1 - s);
+        const q = v * (1 - f * s);
+        const t = v * (1 - (1 - f) * s);
+
+        switch (i % 6) {
+            case 0: r = v; g = t; b = p; break;
+            case 1: r = q; g = v; b = p; break;
+            case 2: r = p; g = v; b = t; break;
+            case 3: r = p; g = q; b = v; break;
+            case 4: r = t; g = p; b = v; break;
+            case 5: r = v; g = p; b = q; break;
+        }
+
+        return {
+            r: Math.round(r * 255),
+            g: Math.round(g * 255),
+            b: Math.round(b * 255)
+        };
+    }
+
+    function rgbToHex(r, g, b) {
+        const toHex = n => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, "0");
+        return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+    }
+
+    function hexToRgb(hex) {
+        const clean = (hex || "#000000").replace("#", "");
+        const full = clean.length === 3
+            ? clean.split("").map(ch => ch + ch).join("")
+            : clean.padEnd(6, "0").slice(0, 6);
+        const n = parseInt(full, 16);
+        return {
+            r: (n >> 16) & 255,
+            g: (n >> 8) & 255,
+            b: n & 255
+        };
+    }
+
+    function rgbToHsv(r, g, b) {
+        r /= 255; g /= 255; b /= 255;
+        const max = Math.max(r, g, b);
+        const min = Math.min(r, g, b);
+        const d = max - min;
+
+        let h = 0;
+        const s = max === 0 ? 0 : d / max;
+        const v = max;
+
+        if (d !== 0) {
+            switch (max) {
+                case r: h = ((g - b) / d) % 6; break;
+                case g: h = (b - r) / d + 2; break;
+                case b: h = (r - g) / d + 4; break;
+            }
+            h /= 6;
+            if (h < 0) h += 1;
+        }
+
+        return { h, s, v };
+    }
+
+    function syncColorUiFromActiveColor() {
+        const { r, g, b } = hexToRgb(state.activeColor);
+        const hsv = rgbToHsv(r, g, b);
+        state.colorUi.x = hsv.h;
+        state.colorUi.y = 1 - hsv.s;
+        state.colorUi.value = hsv.v;
+        el.colorPicker.value = state.activeColor;
+        rememberCustomColor(state.activeColor);
+        renderColorCanvas();
+        updateColorMarker();
+    }
+
+    function renderColorCanvas() {
+        const canvas = el.colorCanvas;
+        if (!canvas) return;
+        const ctx = canvas.getContext("2d");
+        const w = canvas.width;
+        const h = canvas.height;
+        const image = ctx.createImageData(w, h);
+
+        for (let y = 0; y < h; y++) {
+            const sat = 1 - (y / (h - 1));
+            for (let x = 0; x < w; x++) {
+                const hue = x / (w - 1);
+                const rgb = hsvToRgb(hue, sat, state.colorUi.value);
+                const i = (y * w + x) * 4;
+                image.data[i] = rgb.r;
+                image.data[i + 1] = rgb.g;
+                image.data[i + 2] = rgb.b;
+                image.data[i + 3] = 255;
+            }
+        }
+
+        ctx.putImageData(image, 0, 0);
+        updateColorMarker();
+    }
+
+    function updateColorMarker() {
+        if (!el.colorMarker || !el.colorCanvas) return;
+        const rect = el.colorCanvas.getBoundingClientRect();
+        el.colorMarker.style.left = `${state.colorUi.x * rect.width}px`;
+        el.colorMarker.style.top = `${state.colorUi.y * rect.height}px`;
+    }
+
+    function pickColorFromCanvas(clientX, clientY) {
+        const rect = el.colorCanvas.getBoundingClientRect();
+        const px = Math.max(0, Math.min(rect.width, clientX - rect.left));
+        const py = Math.max(0, Math.min(rect.height, clientY - rect.top));
+
+        state.colorUi.x = px / rect.width;
+        state.colorUi.y = py / rect.height;
+
+        const hue = state.colorUi.x;
+        const sat = 1 - state.colorUi.y;
+        const rgb = hsvToRgb(hue, sat, state.colorUi.value);
+
+        state.activeColor = rgbToHex(rgb.r, rgb.g, rgb.b);
+        el.colorPicker.value = state.activeColor;
+        rememberCustomColor(state.activeColor);
+        syncControlValues();
+        updateColorMarker();
+        if (state.tool !== "color") setTool("color");
+        renderPreview();
+    }
+
+    function updateColorFromHsV() {
+        const hue = state.colorUi.x;
+        const sat = 1 - state.colorUi.y;
+        const rgb = hsvToRgb(hue, sat, state.colorUi.value);
+        state.activeColor = rgbToHex(rgb.r, rgb.g, rgb.b);
+        el.colorPicker.value = state.activeColor;
+        rememberCustomColor(state.activeColor);
+        syncControlValues();
+        renderColorCanvas();
+        if (state.tool !== "color") setTool("color");
+        renderPreview();
+    }
+
+    function makeId() {
+        return `path_${Math.random().toString(36).slice(2, 10)}`;
+    }
+
+    function clonePaths(paths) {
+        return JSON.parse(JSON.stringify(paths));
+    }
+
+    function createSvgNode(tag, attrs = {}) {
+        const node = document.createElementNS(SVG_NS, tag);
+        for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
+        return node;
+    }
+
+    function currentStrokeColor() {
+        return state.activeColor;
+    }
+
+    function dist(a, b) {
+        return Math.hypot(b.x - a.x, b.y - a.y);
+    }
+
+    function lerpPoint(a, b, t) {
+        return {
+            x: a.x + (b.x - a.x) * t,
+            y: a.y + (b.y - a.y) * t
+        };
+    }
+
+    function pointsEqual(a, b, eps = 0.0001) {
+        return Math.abs(a.x - b.x) < eps && Math.abs(a.y - b.y) < eps;
+    }
+
+    function setEyedropperArmed(armed) {
+        state.eyedropperArmed = armed;
+        el.canvasWrap.classList.toggle("eyedropper", armed);
+    }
+
+    function rememberCustomColor(color) {
+        if (el.memorySwatch) {
+            el.memorySwatch.dataset.color = color;
+            el.memorySwatch.style.background = color;
+            el.memorySwatch.title = `Custom color memory: ${color}`;
+        }
+    }
+
+    function pathHitAtPoint(path, point) {
+        if (!path || !path.points || !path.points.length) return false;
+
+        if (path.points.length === 1) {
+            const r = Math.max(4, path.strokeWidth * 0.5);
+            return dist(path.points[0], point) <= r;
+        }
+
+        const hitRadius = Math.max(4, path.strokeWidth * 0.5 + 1);
+        const sqTolerance = hitRadius * hitRadius;
+
+        for (let i = 0; i < path.points.length - 1; i++) {
+            if (getSqSegDist(point, path.points[i], path.points[i + 1]) <= sqTolerance) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    function pickTopmostVectorColor(point) {
+        for (let i = state.paths.length - 1; i >= 0; i--) {
+            const path = state.paths[i];
+            if (pathHitAtPoint(path, point)) {
+                return path.color;
+            }
+        }
+        return null;
+    }
+
+    function sampleReferenceImageColor(point) {
+        if (!state.referenceImage.src || !state.referenceImage.samplerCtx) return null;
+
+        const placement = getReferenceImagePlacement();
+        if (!placement) return null;
+
+        const { x, y, drawWidth, drawHeight } = placement;
+        if (point.x < x || point.x > x + drawWidth || point.y < y || point.y > y + drawHeight) {
+            return null;
+        }
+
+        const ix = Math.max(0, Math.min(state.referenceImage.width - 1,
+            Math.floor(((point.x - x) / drawWidth) * state.referenceImage.width)));
+        const iy = Math.max(0, Math.min(state.referenceImage.height - 1,
+            Math.floor(((point.y - y) / drawHeight) * state.referenceImage.height)));
+
+        const data = state.referenceImage.samplerCtx.getImageData(ix, iy, 1, 1).data;
+        return `#${[data[0], data[1], data[2]].map(v => v.toString(16).padStart(2, "0")).join("")}`;
+    }
+
+    function tryEyedropperPick(point) {
+        let picked = null;
+
+        if (state.referenceImage.onTop) {
+            picked = sampleReferenceImageColor(point) || pickTopmostVectorColor(point);
+        } else {
+            picked = pickTopmostVectorColor(point) || sampleReferenceImageColor(point);
+        }
+
+        if (!picked) return false;
+
+        state.activeColor = picked;
+        syncColorUiFromActiveColor();
+        syncControlValues();
+        renderPreview();
+        setTool("draw");
+        setEyedropperArmed(false);
+        setStatus(`Picked color ${picked}.`, "good");
+        return true;
+    }
+
+    function pointInCircle(p, center, r) {
+        const dx = p.x - center.x;
+        const dy = p.y - center.y;
+        return dx * dx + dy * dy <= r * r;
+    }
+
+    // ---------- World / screen conversion ----------
+    function clientToWorld(clientX, clientY) {
+        const pt = el.svg.createSVGPoint();
+        pt.x = clientX;
+        pt.y = clientY;
+        const matrix = el.svg.getScreenCTM();
+        if (!matrix) return { x: 0, y: 0 };
+        const world = pt.matrixTransform(matrix.inverse());
+        return { x: world.x, y: world.y };
+    }
+
+    function eventWorldPoint(event) {
+        return clientToWorld(event.clientX, event.clientY);
+    }
+
+    function effectiveSampleSpacingPx() {
+        const widthBias = Math.sqrt(Math.max(1, state.markerSize) / 3);
+        return Math.max(0.75, Math.min(10, state.sampleSpacingPx * widthBias));
+    }
+
+    function effectiveSimplifyTolerance() {
+        const widthBias = Math.sqrt(Math.max(1, state.markerSize) / 3);
+        return Math.max(0.5, Math.min(6, state.simplifyTolerance * widthBias));
+    }
+
+    function shouldAppendRawPoint(event, lastPoint) {
+        if (!lastPoint) return true;
+
+        const matrix = el.svg.getScreenCTM();
+        if (!matrix) return true;
+
+        const worldPt = el.svg.createSVGPoint();
+        worldPt.x = lastPoint.x;
+        worldPt.y = lastPoint.y;
+        const lastClient = worldPt.matrixTransform(matrix);
+
+        const dx = event.clientX - lastClient.x;
+        const dy = event.clientY - lastClient.y;
+
+        return Math.hypot(dx, dy) >= effectiveSampleSpacingPx();
+    }
+
+    function applyCamera() {
+        el.svg.setAttribute(
+            "viewBox",
+            `${state.camera.x} ${state.camera.y} ${state.camera.width} ${state.camera.height}`
+        );
+    }
+
+
+    function setFocusMode(enabled) {
+        document.body.classList.toggle("focus-mode", enabled);
+        fitCanvasStage();
+        renderAll();
+        setStatus(enabled ? "Focus mode enabled." : "Focus mode disabled.", "good");
+    }
+
+    function toggleFocusMode() {
+        setFocusMode(!document.body.classList.contains("focus-mode"));
+    }
+
+    function fitCanvasStage() {
+        if (!el.canvasWrap || !el.canvasStage) return;
+
+        const wrapRect = el.canvasWrap.getBoundingClientRect();
+        const wrapStyle = getComputedStyle(el.canvasWrap);
+        const stageStyle = getComputedStyle(el.canvasStage);
+
+        const wrapPadX = parseFloat(wrapStyle.paddingLeft) + parseFloat(wrapStyle.paddingRight);
+        const wrapPadY = parseFloat(wrapStyle.paddingTop) + parseFloat(wrapStyle.paddingBottom);
+
+        const stageChromeX =
+            parseFloat(stageStyle.paddingLeft) + parseFloat(stageStyle.paddingRight) +
+            parseFloat(stageStyle.borderLeftWidth) + parseFloat(stageStyle.borderRightWidth);
+
+        const stageChromeY =
+            parseFloat(stageStyle.paddingTop) + parseFloat(stageStyle.paddingBottom) +
+            parseFloat(stageStyle.borderTopWidth) + parseFloat(stageStyle.borderBottomWidth);
+
+        const availableWidth = Math.max(0, wrapRect.width - wrapPadX);
+        const availableHeight = Math.max(0, wrapRect.height - wrapPadY);
+
+        // Fit the stage to both width and height so the canvas keeps breathing room
+        // on the bottom as the window changes aspect ratio.
+        const widthFromHeight = ((availableHeight - stageChromeY) * BASE_WIDTH / BASE_HEIGHT) + stageChromeX;
+        const targetWidth = Math.max(320, Math.min(availableWidth, widthFromHeight));
+
+        el.canvasStage.style.width = `${targetWidth}px`;
+    }
+
+    function resetView() {
+        state.camera.x = 0;
+        state.camera.y = 0;
+        state.camera.width = BASE_WIDTH;
+        state.camera.height = BASE_HEIGHT;
+        applyCamera();
+        setStatus("View reset.", "good");
+        renderAll();
+    }
+
+    function zoomAt(worldPoint, factor) {
+        const oldCam = { ...state.camera };
+
+        let newWidth = oldCam.width * factor;
+        newWidth = Math.max(state.camera.minWidth, Math.min(state.camera.maxWidth, newWidth));
+        const aspect = BASE_HEIGHT / BASE_WIDTH;
+        const newHeight = newWidth * aspect;
+
+        const relX = (worldPoint.x - oldCam.x) / oldCam.width;
+        const relY = (worldPoint.y - oldCam.y) / oldCam.height;
+
+        state.camera.width = newWidth;
+        state.camera.height = newHeight;
+        state.camera.x = worldPoint.x - relX * newWidth;
+        state.camera.y = worldPoint.y - relY * newHeight;
+
+        applyCamera();
+        renderPreview();
+        updateStats();
+    }
+
+    function panCamera(dx, dy) {
+        state.camera.x += dx;
+        state.camera.y += dy;
+        applyCamera();
+        renderPreview();
+    }
+
+    function beginPanFromEvent(event) {
+        state.navigation.panning = true;
+        state.navigation.panStartCamera = { ...state.camera };
+        state.navigation.panStartClient = { x: event.clientX, y: event.clientY };
+        el.canvasWrap.classList.add("dragging");
+    }
+
+    function updatePanFromEvent(event) {
+        const rect = el.svg.getBoundingClientRect();
+        const worldPerPixelX = state.navigation.panStartCamera.width / rect.width;
+        const worldPerPixelY = state.navigation.panStartCamera.height / rect.height;
+
+        const dxPixels = event.clientX - state.navigation.panStartClient.x;
+        const dyPixels = event.clientY - state.navigation.panStartClient.y;
+
+        state.camera.x = state.navigation.panStartCamera.x - dxPixels * worldPerPixelX;
+        state.camera.y = state.navigation.panStartCamera.y - dyPixels * worldPerPixelY;
+        applyCamera();
+        renderPreview();
+    }
+
+    function endPan() {
+        state.navigation.panning = false;
+        el.canvasWrap.classList.remove("dragging");
+    }
+
+    function addDotPath(point) {
+        state.paths.push({
+            id: makeId(),
+            points: [point],
+            color: currentStrokeColor(),
+            strokeWidth: state.markerSize
+        });
+        saveState();
+        renderAll();
+        setStatus("Dot added.", "good");
+    }
+
+    // ---------- Simplify ----------
+    function getSqDist(p1, p2) {
+        const dx = p1.x - p2.x;
+        const dy = p1.y - p2.y;
+        return dx * dx + dy * dy;
+    }
+
+    function getSqSegDist(p, p1, p2) {
+        let x = p1.x;
+        let y = p1.y;
+        let dx = p2.x - x;
+        let dy = p2.y - y;
+
+        if (dx !== 0 || dy !== 0) {
+            const t = ((p.x - x) * dx + (p.y - y) * dy) / (dx * dx + dy * dy);
+            if (t > 1) {
+                x = p2.x;
+                y = p2.y;
+            } else if (t > 0) {
+                x += dx * t;
+                y += dy * t;
+            }
+        }
+
+        dx = p.x - x;
+        dy = p.y - y;
+        return dx * dx + dy * dy;
+    }
+
+    function simplifyRadialDist(points, sqTolerance) {
+        let prev = points[0];
+        const out = [prev];
+        for (let i = 1; i < points.length; i++) {
+            const point = points[i];
+            if (getSqDist(point, prev) > sqTolerance) {
+                out.push(point);
+                prev = point;
+            }
+        }
+        if (prev !== points[points.length - 1]) out.push(points[points.length - 1]);
+        return out;
+    }
+
+    function simplifyDPStep(points, first, last, sqTolerance, simplified) {
+        let maxSqDist = sqTolerance;
+        let index = -1;
+
+        for (let i = first + 1; i < last; i++) {
+            const sqDist = getSqSegDist(points[i], points[first], points[last]);
+            if (sqDist > maxSqDist) {
+                index = i;
+                maxSqDist = sqDist;
+            }
+        }
+
+        if (index !== -1) {
+            if (index - first > 1) simplifyDPStep(points, first, index, sqTolerance, simplified);
+            simplified.push(points[index]);
+            if (last - index > 1) simplifyDPStep(points, index, last, sqTolerance, simplified);
+        }
+    }
+
+    function simplifyPoints(points, tolerance = 2) {
+        if (points.length < 3) return points.slice();
+        const sqTolerance = tolerance * tolerance;
+        const reduced = simplifyRadialDist(points, sqTolerance);
+        const last = reduced.length - 1;
+        const simplified = [reduced[0]];
+        simplifyDPStep(reduced, 0, last, sqTolerance, simplified);
+        simplified.push(reduced[last]);
+        return simplified;
+    }
+
+    // ---------- Path data ----------
+    function smoothPathData(points) {
+        if (!points.length) return "";
+        if (points.length === 1) {
+            const p = points[0];
+            return `M ${p.x} ${p.y} L ${p.x + 0.001} ${p.y}`;
+        }
+        if (points.length === 2) {
+            return `M ${points[0].x} ${points[0].y} L ${points[1].x} ${points[1].y}`;
+        }
+
+        // Special case: exactly 3 points should render as one explicit quadratic arc.
+        // This avoids the midpoint/T smoother flattening minimal bends into near-lines.
+        if (points.length === 3) {
+            return `M ${points[0].x} ${points[0].y} Q ${points[1].x} ${points[1].y} ${points[2].x} ${points[2].y}`;
+        }
+
+        const d = ["M", points[0].x, points[0].y];
+        for (let i = 1; i < points.length - 2; i++) {
+            const mx = (points[i].x + points[i + 1].x) / 2;
+            const my = (points[i].y + points[i + 1].y) / 2;
+            d.push("Q", points[i].x, points[i].y, mx, my);
+        }
+        d.push("T", points[points.length - 1].x, points[points.length - 1].y);
+        return d.join(" ");
+    }
+
+    // ---------- Eraser geometry ----------
+    function lineCircleIntersections(a, b, center, radius) {
+        const x1 = a.x, y1 = a.y, x2 = b.x, y2 = b.y, cx = center.x, cy = center.y, r = radius;
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        const A = dx * dx + dy * dy;
+        const B = 2 * (dx * (x1 - cx) + dy * (y1 - cy));
+        const C = (x1 - cx) * (x1 - cx) + (y1 - cy) * (y1 - cy) - r * r;
+        const det = B * B - 4 * A * C;
+
+        if (det < 0) return [];
+        if (Math.abs(det) < 1e-9) {
+            const t = -B / (2 * A);
+            return (t >= 0 && t <= 1) ? [t] : [];
+        }
+
+        const s = Math.sqrt(det);
+        const t1 = (-B + s) / (2 * A);
+        const t2 = (-B - s) / (2 * A);
+        const ts = [];
+        if (t1 >= 0 && t1 <= 1) ts.push(t1);
+        if (t2 >= 0 && t2 <= 1) ts.push(t2);
+        ts.sort((x, y) => x - y);
+        return ts.filter((t, i) => i === 0 || Math.abs(t - ts[i - 1]) > 1e-6);
+    }
+
+    function sliceSegmentByDualCircle(a, b, center, outerRadius, innerRadius) {
+        const ts = [0, 1];
+        for (const t of lineCircleIntersections(a, b, center, outerRadius)) ts.push(t);
+        for (const t of lineCircleIntersections(a, b, center, innerRadius)) ts.push(t);
+        ts.sort((x, y) => x - y);
+
+        const uniq = [];
+        for (const t of ts) {
+            if (!uniq.length || Math.abs(t - uniq[uniq.length - 1]) > 1e-6) uniq.push(t);
+        }
+
+        const kept = [];
+        for (let i = 0; i < uniq.length - 1; i++) {
+            const t0 = uniq[i];
+            const t1 = uniq[i + 1];
+            if (t1 - t0 < 1e-6) continue;
+
+            const p0 = lerpPoint(a, b, t0);
+            const p1 = lerpPoint(a, b, t1);
+            const mid = lerpPoint(a, b, (t0 + t1) * 0.5);
+
+            const insideOuter = pointInCircle(mid, center, outerRadius);
+            const insideInner = pointInCircle(mid, center, innerRadius);
+
+            if (!insideOuter && !insideInner) kept.push([p0, p1]);
+        }
+
+        return kept;
+    }
+
+    function explodePathsForEraser() {
+        // No-op: erasing now works directly on joined paths.
+    }
+
+    function joinPathsAfterEraser() {
+        // No-op: joined-path rendering is preserved at all times.
+    }
+
+    function eraseWithDualCircle(center) {
+        const outerRadius = state.eraserRadius;
+        const innerRadius = Math.max(0, outerRadius - state.shaveGap);
+        const newPaths = [];
+
+        for (const path of state.paths) {
+            if (path.points.length < 2) continue;
+
+            let currentOut = [];
+
+            for (let i = 0; i < path.points.length - 1; i++) {
+                const a = path.points[i];
+                const b = path.points[i + 1];
+                const pieces = sliceSegmentByDualCircle(a, b, center, outerRadius, innerRadius);
+
+                if (!pieces.length) {
+                    if (currentOut.length > 1) {
+                        newPaths.push({
+                            id: makeId(),
+                            points: currentOut,
+                            color: path.color,
+                            strokeWidth: path.strokeWidth
+                        });
+                    }
+                    currentOut = [];
+                    continue;
+                }
+
+                for (const [p0, p1] of pieces) {
+                    if (!currentOut.length) {
+                        currentOut = [p0, p1];
+                    } else {
+                        const tail = currentOut[currentOut.length - 1];
+                        if (pointsEqual(tail, p0)) {
+                            currentOut.push(p1);
+                        } else {
+                            if (currentOut.length > 1) {
+                                newPaths.push({
+                                    id: makeId(),
+                                    points: currentOut,
+                                    color: path.color,
+                                    strokeWidth: path.strokeWidth
+                                });
+                            }
+                            currentOut = [p0, p1];
+                        }
+                    }
+                }
+            }
+
+            if (currentOut.length > 1) {
+                newPaths.push({
+                    id: makeId(),
+                    points: currentOut,
+                    color: path.color,
+                    strokeWidth: path.strokeWidth
+                });
+            }
+        }
+
+        state.paths = newPaths;
+    }
+
+    // ---------- Reference image ----------
+    function toggleReferenceLayerOrder() {
+        state.referenceImage.onTop = !state.referenceImage.onTop;
+        renderAll();
+        setStatus(state.referenceImage.onTop ? "Reference image moved in front of paths." : "Reference image moved behind paths.");
+    }
+
+
+    function updateImageActionButton() {
+        if (!el.imageActionBtn || !el.imageActionIcon) return;
+
+        if (!state.referenceImage.src) {
+            el.imageActionBtn.title = "Import image (T)";
+            el.imageActionIcon.setAttribute("viewBox", "0 0 220 64");
+            el.imageActionIcon.innerHTML = `
+                    <rect x="4" y="12" width="60" height="34" rx="3" fill="none" stroke="currentColor" stroke-width="2"/>
+                    <circle cx="22" cy="24" r="3" fill="currentColor"/>
+                    <path d="M8 40 L24 29 L34 35 L50 21 L60 21 L60 40 Z" fill="currentColor"/>
+                    <path d="M84 32 H146" stroke="rgba(255,255,255,.18)" stroke-width="4" stroke-linecap="round"/>
+                    <path d="M170 20 V44 M158 32 H182" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
+            `;
+        } else {
+            el.imageActionBtn.title = "Toggle image layer stacking (T)";
+            el.imageActionIcon.setAttribute("viewBox", "0 0 220 64");
+            el.imageActionIcon.innerHTML = `
+                    <rect x="4" y="12" width="60" height="34" rx="3" fill="none" stroke="currentColor" stroke-width="2"/>
+                    <circle cx="22" cy="24" r="3" fill="currentColor"/>
+                    <path d="M8 40 L24 29 L34 35 L50 21 L60 21 L60 40 Z" fill="currentColor"/>
+                    <path d="M84 32 H146" stroke="rgba(255,255,255,.18)" stroke-width="4" stroke-linecap="round"/>
+                    <path d="M160 24 H182 M160 40 H182" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
+            `;
+        }
+    }
+
+    function syncLayerOrder() {
+        if (state.referenceImage.onTop) {
+            el.svg.appendChild(el.pathLayer);
+            el.svg.appendChild(el.referenceLayer);
+            el.svg.appendChild(el.overlayLayer);
+        } else {
+            el.svg.appendChild(el.referenceLayer);
+            el.svg.appendChild(el.pathLayer);
+            el.svg.appendChild(el.overlayLayer);
+        }
+    }
+
+    function getReferenceImagePlacement() {
+        const iw = state.referenceImage.width;
+        const ih = state.referenceImage.height;
+        if (!iw || !ih) return null;
+
+        // Fit the image to the reset view (the base world), preserving aspect ratio.
+        // This keeps imported references comfortably visible at 100% view and
+        // avoids oversized images after Reset View.
+        const scale = Math.min(BASE_WIDTH / iw, BASE_HEIGHT / ih);
+
+        const drawWidth = iw * scale;
+        const drawHeight = ih * scale;
+        const x = (BASE_WIDTH - drawWidth) * 0.5;
+        const y = (BASE_HEIGHT - drawHeight) * 0.5;
+
+        return { x, y, drawWidth, drawHeight };
+    }
+
+    function renderReferenceLayer() {
+        el.referenceLayer.replaceChildren();
+        if (!state.referenceImage.src) return;
+
+        const placement = getReferenceImagePlacement();
+        if (!placement) return;
+
+        el.referenceLayer.appendChild(createSvgNode("image", {
+            href: state.referenceImage.src,
+            x: placement.x,
+            y: placement.y,
+            width: placement.drawWidth,
+            height: placement.drawHeight,
+            opacity: state.referenceImage.opacity,
+            "pointer-events": "none",
+            preserveAspectRatio: "none"
+        }));
+    }
+
+    function loadReferenceImageFromFile(file) {
+        const reader = new FileReader();
+        reader.onload = () => {
+            const img = new Image();
+            img.onload = () => {
+                state.referenceImage.src = reader.result;
+                state.referenceImage.width = img.naturalWidth;
+                state.referenceImage.height = img.naturalHeight;
+
+                const samplerCanvas = document.createElement("canvas");
+                samplerCanvas.width = img.naturalWidth;
+                samplerCanvas.height = img.naturalHeight;
+                const samplerCtx = samplerCanvas.getContext("2d", { willReadFrequently: true });
+                samplerCtx.drawImage(img, 0, 0);
+                state.referenceImage.samplerCanvas = samplerCanvas;
+                state.referenceImage.samplerCtx = samplerCtx;
+
+                renderAll();
+                setStatus(`Reference image loaded (${img.naturalWidth}×${img.naturalHeight}).`, "good");
+            };
+            img.src = reader.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    // ---------- Rendering ----------
+    function renderPaths() {
+        el.pathLayer.replaceChildren();
+        for (const path of state.paths) {
+            if (path.points.length === 1) {
+                el.pathLayer.appendChild(createSvgNode("circle", {
+                    cx: path.points[0].x,
+                    cy: path.points[0].y,
+                    r: path.strokeWidth * 0.5,
+                    fill: path.color
+                }));
+                continue;
+            }
+
+            el.pathLayer.appendChild(createSvgNode("path", {
+                d: smoothPathData(path.points),
+                fill: "none",
+                stroke: path.color,
+                "stroke-width": path.strokeWidth,
+                "stroke-linecap": "round",
+                "stroke-linejoin": "round"
+            }));
+        }
+    }
+
+    function renderPreview() {
+        el.overlayLayer.replaceChildren();
+
+        if (state.cursor.inside && state.tool === "eraser") {
+            el.overlayLayer.appendChild(createSvgNode("circle", {
+                cx: state.cursor.x,
+                cy: state.cursor.y,
+                r: state.eraserRadius,
+                fill: "none",
+                stroke: "#111",
+                "stroke-width": 1.75
+            }));
+            el.overlayLayer.appendChild(createSvgNode("circle", {
+                cx: state.cursor.x,
+                cy: state.cursor.y,
+                r: state.eraserRadius,
+                fill: "none",
+                stroke: "#fff",
+                "stroke-width": 0.75,
+                opacity: 0.9
+            }));
+        } else if (state.cursor.inside) {
+            el.overlayLayer.appendChild(createSvgNode("circle", {
+                cx: state.cursor.x,
+                cy: state.cursor.y,
+                r: state.markerSize * 0.5,
+                fill: currentStrokeColor(),
+                opacity: .65,
+                stroke: "none"
+            }));
+        }
+
+        if (state.currentPoints.length > 1) {
+            el.overlayLayer.appendChild(createSvgNode("path", {
+                d: smoothPathData(state.currentPoints),
+                fill: "none",
+                stroke: currentStrokeColor(),
+                "stroke-width": state.markerSize,
+                "stroke-linecap": "round",
+                "stroke-linejoin": "round",
+                opacity: .9
+            }));
+        }
+    }
+
+    function renderAll() {
+        syncLayerOrder();
+        updateImageActionButton();
+        renderReferenceLayer();
+        renderPaths();
+        renderPreview();
+        updateStats();
+    }
+
+    // ---------- History ----------
+    function saveState() {
+        state.history = state.history.slice(0, state.historyIndex + 1);
+        state.history.push(clonePaths(state.paths));
+        state.historyIndex++;
+        updateStats();
+    }
+
+    function undo() {
+        if (state.historyIndex <= 0) return;
+        state.historyIndex--;
+        state.paths = clonePaths(state.history[state.historyIndex]);
+        renderAll();
+        setStatus("Undo.");
+    }
+
+    function redo() {
+        if (state.historyIndex >= state.history.length - 1) return;
+        state.historyIndex++;
+        state.paths = clonePaths(state.history[state.historyIndex]);
+        renderAll();
+        setStatus("Redo.");
+    }
+
+    // ---------- Actions ----------
+    function finalizeCurrentStroke() {
+        if (!state.drawing) return;
+
+        if (state.currentPoints.length === 1) {
+            addDotPath(state.currentPoints[0]);
+            state.currentPoints = [];
+            state.drawing = false;
+            return;
+        }
+
+        const simplified = simplifyPoints(state.currentPoints, effectiveSimplifyTolerance());
+
+        if (simplified.length > 1) {
+            state.paths.push({
+                id: makeId(),
+                points: simplified,
+                color: currentStrokeColor(),
+                strokeWidth: state.markerSize
+            });
+            saveState();
+            setStatus(`Stroke added (${state.currentPoints.length} raw → ${simplified.length} kept, sample ${effectiveSampleSpacingPx().toFixed(2)}px).`, "good");
+        } else if (simplified.length === 1) {
+            addDotPath(simplified[0]);
+        }
+
+        state.currentPoints = [];
+        state.drawing = false;
+        renderAll();
+    }
+
+    function clearAll() {
+        state.paths = [];
+        state.currentPoints = [];
+        saveState();
+        renderAll();
+        setStatus("Cleared.");
+    }
+
+    function exportSVG() {
+        const exportSvg = createSvgNode("svg", {
+            xmlns: SVG_NS,
+            width: BASE_WIDTH,
+            height: BASE_HEIGHT,
+            viewBox: `0 0 ${BASE_WIDTH} ${BASE_HEIGHT}`
+        });
+
+        if (state.referenceImage.src) {
+            const placement = getReferenceImagePlacement();
+            if (placement && !state.referenceImage.onTop) {
+                exportSvg.appendChild(createSvgNode("image", {
+                    href: state.referenceImage.src,
+                    x: placement.x,
+                    y: placement.y,
+                    width: placement.drawWidth,
+                    height: placement.drawHeight,
+                    opacity: state.referenceImage.opacity,
+                    "pointer-events": "none",
+                    preserveAspectRatio: "none"
+                }));
+            }
+        }
+
+        for (const path of state.paths) {
+            if (path.points.length === 1) {
+                exportSvg.appendChild(createSvgNode("circle", {
+                    cx: path.points[0].x,
+                    cy: path.points[0].y,
+                    r: path.strokeWidth * 0.5,
+                    fill: path.color
+                }));
+                continue;
+            }
+
+            exportSvg.appendChild(createSvgNode("path", {
+                d: smoothPathData(path.points),
+                fill: "none",
+                stroke: path.color,
+                "stroke-width": path.strokeWidth,
+                "stroke-linecap": "round",
+                "stroke-linejoin": "round"
+            }));
+        }
+
+        if (state.referenceImage.src && state.referenceImage.onTop) {
+            const placement = getReferenceImagePlacement();
+            if (placement) {
+                exportSvg.appendChild(createSvgNode("image", {
+                    href: state.referenceImage.src,
+                    x: placement.x,
+                    y: placement.y,
+                    width: placement.drawWidth,
+                    height: placement.drawHeight,
+                    opacity: state.referenceImage.opacity,
+                    "pointer-events": "none",
+                    preserveAspectRatio: "none"
+                }));
+            }
+        }
+
+        const serializer = new XMLSerializer();
+        let svgString = serializer.serializeToString(exportSvg);
+        svgString = `<?xml version="1.0" encoding="UTF-8" standalone="no"?>\n${svgString}`;
+
+        const blob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        const now = new Date();
+        const stamp = [
+            now.getFullYear(),
+            String(now.getMonth() + 1).padStart(2, "0"),
+            String(now.getDate()).padStart(2, "0"),
+            String(now.getHours()).padStart(2, "0"),
+            String(now.getMinutes()).padStart(2, "0"),
+            String(now.getSeconds()).padStart(2, "0")
+        ].join("-");
+        a.href = url;
+        a.download = `vector-trace-${stamp}.svg`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        setStatus("SVG exported.", "good");
+    }
+
+    // ---------- Tools ----------
+    function setTool(tool) {
+        state.tool = tool;
+        setEyedropperArmed(false);
+        el.toolDraw.classList.toggle("active", tool === "draw");
+        el.toolEraser.classList.toggle("active", tool === "eraser");
+        if (el.colorPickerPanel) {
+            el.colorPickerPanel.classList.toggle("active", tool === "color");
+        }
+
+        renderAll();
+        const names = { draw: "Draw", eraser: "Eraser", color: "Color" };
+        setStatus(`${names[tool] || tool} tool selected.`);
+    }
+
+    // ---------- Input ----------
+    // ---------- Pointer handlers ----------
+    function onPointerDown(event) {
+        if (event.pointerType !== "mouse" && event.isPrimary === false) return;
+        if (event.pointerType === "mouse" && event.button !== 0 && event.button !== 1) return;
+
+        const p = eventWorldPoint(event);
+        state.cursor = { ...p, inside: true };
+
+        if (event.button === 1 || (event.button === 0 && state.spacePanArmed)) {
+            event.preventDefault();
+            state.pointerDown = true;
+            beginPanFromEvent(event);
+            setStatus("Panning...");
+            return;
+        }
+
+        state.pointerDown = true;
+
+        if (state.eyedropperArmed || state.tool === "color") {
+            tryEyedropperPick(p);
+            state.pointerDown = false;
+            return;
+        }
+
+        if (state.tool === "eraser") {
+            state.erasing = true;
+            eraseWithDualCircle(p);
+            renderAll();
+            setStatus("Erasing...");
+            return;
+        }
+
+        state.drawing = true;
+        state.currentPoints = [p];
+        renderPreview();
+        setStatus("Drawing...");
+    }
+
+    function onPointerMove(event) {
+        const p = eventWorldPoint(event);
+        state.cursor = { ...p, inside: true };
+
+        if (state.navigation.panning) {
+            updatePanFromEvent(event);
+            return;
+        }
+
+        if (state.drawing) {
+            handleDrawPointerMove(event, p);
+        }
+
+        if (state.erasing && state.pointerDown) {
+            handleEraserPointerMove(p);
+            return;
+        }
+
+        renderPreview();
+    }
+
+    function onPointerUp(event) {
+        if (event.pointerType !== "mouse" && event.isPrimary === false) return;
+        if (event.pointerType === "mouse" && event.button !== 0 && event.button !== 1) return;
+        const wasErasing = state.erasing;
+
+        if (state.navigation.panning) {
+            endPan();
+            state.pointerDown = false;
+            setStatus("Pan ended.", "good");
+            return;
+        }
+
+        if (event.button === 1) {
+            state.pointerDown = false;
+            return;
+        }
+
+        if (state.drawing) {
+            finalizeCurrentStroke();
+        } else if (wasErasing) {
+            saveState();
+            renderAll();
+            setStatus("Erase committed.", "good");
+        }
+
+        state.pointerDown = false;
+        state.drawing = false;
+        state.erasing = false;
+    }
+
+    function onPointerEnter(event) {
+        const p = eventWorldPoint(event);
+        state.cursor = { ...p, inside: true };
+        renderPreview();
+    }
+
+    function onPointerLeave() {
+        state.cursor.inside = false;
+        renderPreview();
+    }
+
+    function handleDrawPointerMove(event, point) {
+        const last = state.currentPoints[state.currentPoints.length - 1];
+        if (shouldAppendRawPoint(event, last)) {
+            state.currentPoints.push(point);
+        }
+    }
+
+    function handleEraserPointerMove(point) {
+        eraseWithDualCircle(point);
+        renderAll();
+    }
+
+    let sizeHudTimeout = null;
+    let keySizingActive = false;
+
+    function showSizeHud(event, value, label) {
+        el.sizeHud.textContent = `${label}: ${value}`;
+        el.sizeHud.style.display = "block";
+        el.sizeHud.style.left = `${event.clientX + 14}px`;
+        el.sizeHud.style.top = `${event.clientY + 14}px`;
+
+        clearTimeout(sizeHudTimeout);
+        sizeHudTimeout = setTimeout(() => {
+            el.sizeHud.style.display = "none";
+        }, 700);
+    }
+
+    function handleCanvasWheel(event) {
+        if (event.ctrlKey) {
+            event.preventDefault();
+            const p = eventWorldPoint(event);
+            const factor = event.deltaY < 0 ? 1 / 1.1 : 1.1;
+            zoomAt(p, factor);
+            setStatus(`Zoom ${Math.round((BASE_WIDTH / state.camera.width) * 100)}%.`);
+            return;
+        }
+
+        if (keySizingActive) {
+            event.preventDefault();
+            const delta = Math.sign(event.deltaY);
+
+            if (state.tool === "eraser") {
+                state.eraserRadius = Math.max(8, Math.min(200, state.eraserRadius - delta * 4));
+                syncControlValues();
+                renderPreview();
+                showSizeHud(event, state.eraserRadius, "Eraser");
+            } else {
+                state.markerSize = Math.max(1, Math.min(32, state.markerSize - delta));
+                syncControlValues();
+                renderPreview();
+                showSizeHud(event, state.markerSize, "Brush");
+            }
+            return;
+        }
+
+        event.preventDefault();
+        if (event.shiftKey) {
+            const dx = event.deltaY * state.camera.width / 500;
+            panCamera(dx, 0);
+        } else {
+            const dy = event.deltaY * state.camera.height / 500;
+            panCamera(0, dy);
+        }
+    }
+
+    // ---------- Wire up ----------
+    // ---------- UI wiring ----------
+    el.toolDraw.addEventListener("click", () => setTool("draw"));
+    el.toolEraser.addEventListener("click", () => setTool("eraser"));
+    el.imageActionBtn.addEventListener("click", () => {
+        if (!state.referenceImage.src) {
+            el.imageFileInput.click();
+        } else {
+            toggleReferenceLayerOrder();
+        }
+    });
+
+    el.markerSize.addEventListener("input", () => {
+        state.markerSize = Number(el.markerSize.value);
+        syncControlValues();
+        setTool("draw");
+        renderPreview();
+    });
+    el.markerSizeNumber.addEventListener("input", () => {
+        const value = Math.max(1, Math.min(32, Number(el.markerSizeNumber.value) || 1));
+        state.markerSize = value;
+        syncControlValues();
+        setTool("draw");
+        renderPreview();
+    });
+
+    el.eraserRadius.addEventListener("input", () => {
+        state.eraserRadius = Number(el.eraserRadius.value);
+        syncControlValues();
+        setTool("eraser");
+        renderPreview();
+    });
+    el.eraserRadiusNumber.addEventListener("input", () => {
+        const value = Math.max(8, Math.min(200, Number(el.eraserRadiusNumber.value) || 8));
+        state.eraserRadius = value;
+        syncControlValues();
+        setTool("eraser");
+        renderPreview();
+    });
+
+    let colorPicking = false;
+
+    el.colorPickerPanel.addEventListener("pointerdown", () => {
+        setTool("color");
+    });
+
+    el.colorCanvas.addEventListener("pointerdown", (event) => {
+        event.preventDefault();
+        setTool("color");
+        colorPicking = true;
+        if (event.pointerId != null && el.colorCanvas.setPointerCapture) {
+            try { el.colorCanvas.setPointerCapture(event.pointerId); } catch {}
+        }
+        pickColorFromCanvas(event.clientX, event.clientY);
+    });
+
+    window.addEventListener("pointermove", (event) => {
+        if (!colorPicking) return;
+        pickColorFromCanvas(event.clientX, event.clientY);
+    });
+
+    window.addEventListener("pointerup", (event) => {
+        if (colorPicking) {
+            colorPicking = false;
+            if (event.pointerId != null && el.colorCanvas.releasePointerCapture) {
+                try { el.colorCanvas.releasePointerCapture(event.pointerId); } catch {}
+            }
+            setTool("draw");
+            setStatus(`Color selected: ${state.activeColor}`, "good");
+            return;
+        }
+    });
+
+    el.valueSlider.addEventListener("input", () => {
+        state.colorUi.value = Math.max(0, Math.min(1, Number(el.valueSlider.value) / 100));
+        syncControlValues();
+        updateColorFromHsV();
+    });
+
+    el.valueNumber.addEventListener("input", () => {
+        const value = Math.max(0, Math.min(100, Number(el.valueNumber.value) || 0));
+        state.colorUi.value = value / 100;
+        syncControlValues();
+        updateColorFromHsV();
+    });
+
+    el.valueSlider.addEventListener("change", () => {
+        setTool("draw");
+        setStatus(`Color selected: ${state.activeColor}`, "good");
+    });
+
+    el.valueNumber.addEventListener("change", () => {
+        setTool("draw");
+        setStatus(`Color selected: ${state.activeColor}`, "good");
+    });
+
+    // keep hidden native input as a fallback if changed programmatically
+    el.colorPicker.addEventListener("input", () => {
+        state.activeColor = el.colorPicker.value;
+        syncColorUiFromActiveColor();
+        syncControlValues();
+        setTool("draw");
+        renderPreview();
+    });
+
+    if (el.paletteGrid) {
+        el.paletteGrid.addEventListener("click", (event) => {
+            const swatch = event.target.closest(".palette-swatch");
+            if (!swatch) return;
+
+            state.activeColor = swatch.dataset.color;
+            syncColorUiFromActiveColor();
+            syncControlValues();
+            setTool("draw");
+            renderPreview();
+            setStatus(`Palette color selected: ${state.activeColor}`, "good");
+        });
+    }
+
+    el.imageFileInput.addEventListener("change", () => {
+        const file = el.imageFileInput.files && el.imageFileInput.files[0];
+        if (file) loadReferenceImageFromFile(file);
+    });
+    el.imageOpacity.addEventListener("input", () => {
+        state.referenceImage.opacity = Number(el.imageOpacity.value) / 100;
+        syncControlValues();
+        renderAll();
+    });
+    el.imageOpacityNumber.addEventListener("input", () => {
+        const value = Math.max(0, Math.min(100, Number(el.imageOpacityNumber.value) || 0));
+        state.referenceImage.opacity = value / 100;
+        syncControlValues();
+        renderAll();
+    });
+
+    el.undoBtn.addEventListener("click", undo);
+    el.redoBtn.addEventListener("click", redo);
+    el.resetViewBtn.addEventListener("click", resetView);
+    if (el.focusModeBtn) el.focusModeBtn.addEventListener("click", toggleFocusMode);
+    if (el.focusExitBtn) el.focusExitBtn.addEventListener("click", () => setFocusMode(false));
+    el.clearBtn.addEventListener("click", clearAll);
+    el.exportBtn.addEventListener("click", exportSVG);
+
+    el.svg.addEventListener("pointerdown", (event) => {
+        if (event.pointerType !== "mouse") event.preventDefault();
+        if (event.pointerId != null && el.svg.setPointerCapture) {
+            try { el.svg.setPointerCapture(event.pointerId); } catch {}
+        }
+        onPointerDown(event);
+    });
+    el.svg.addEventListener("pointermove", onPointerMove);
+    el.svg.addEventListener("pointerenter", onPointerEnter);
+    el.svg.addEventListener("pointerleave", onPointerLeave);
+    el.svg.addEventListener("contextmenu", (event) => {
+        if (state.navigation.panning) {
+            event.preventDefault();
+        }
+    });
+
+    el.svg.addEventListener("dragstart", (event) => {
+        event.preventDefault();
+    });
+    el.canvasWrap.addEventListener("dragstart", (event) => {
+        event.preventDefault();
+    });
+    window.addEventListener("pointerup", (event) => {
+        if (event.pointerId != null && el.svg.releasePointerCapture) {
+            try { el.svg.releasePointerCapture(event.pointerId); } catch {}
+        }
+        onPointerUp(event);
+    });
+    window.addEventListener("auxclick", (event) => {
+        if (event.button === 1 && el.canvasWrap.contains(event.target)) {
+            event.preventDefault();
+        }
+    });
+
+    // Intercept ctrl+wheel only over the canvas area.
+    el.canvasWrap.addEventListener("wheel", handleCanvasWheel, { passive: false });
+
+    // Outside the canvas, suppress browser ctrl+wheel zoom for this app page.
+    window.addEventListener("wheel", (event) => {
+        if (event.ctrlKey && !el.canvasWrap.contains(event.target)) {
+            event.preventDefault();
+        }
+    }, { passive: false });
+
+    window.addEventListener("keydown", (event) => {
+        const key = event.key.toLowerCase();
+        if (key === "s") {
+            keySizingActive = true;
+        }
+        if (event.code === "Space" && !event.repeat) {
+            const tag = document.activeElement && document.activeElement.tagName;
+            if (tag !== "INPUT" && tag !== "TEXTAREA") {
+                state.spacePanArmed = true;
+                el.canvasWrap.classList.add("spacepan");
+                event.preventDefault();
+            }
+        }
+
+
+        if (event.ctrlKey || event.metaKey) {
+            if (key === "z" && !event.shiftKey) {
+                event.preventDefault();
+                undo();
+                return;
+            }
+            if (key === "y" || (key === "z" && event.shiftKey)) {
+                event.preventDefault();
+                redo();
+                return;
+            }
+            if (key === "s") {
+                event.preventDefault();
+                exportSVG();
+                setStatus("SVG exported.", "good");
+                return;
+            }
+            return;
+        }
+
+        if (key === "d") setTool("draw");
+        if (key === "b") {
+            state.activeColor = "#111111";
+            syncColorUiFromActiveColor();
+            syncControlValues();
+            setTool("draw");
+        }
+        if (key === "w") {
+            state.activeColor = "#ffffff";
+            syncColorUiFromActiveColor();
+            syncControlValues();
+            setTool("draw");
+        }
+        if (key === "r") {
+            state.activeColor = "#d11a2a";
+            syncColorUiFromActiveColor();
+            syncControlValues();
+            setTool("draw");
+        }
+
+        if (key === "v") {
+            resetView();
+        }
+        if (key === "f") {
+            toggleFocusMode();
+            return;
+        }
+
+        if (key === "c") {
+            setTool("color");
+            setStatus("Color tool selected. Click canvas to sample, or use the panel.", "good");
+        }
+        if (key === "escape" && document.body.classList.contains("focus-mode")) {
+            setFocusMode(false);
+            return;
+        }
+        if (key === "escape" && state.eyedropperArmed) {
+            setEyedropperArmed(false);
+            setStatus("Eyedropper cancelled.");
+            return;
+        }
+        if (key === "e") setTool("eraser");
+        if (key === "t") {
+            if (!state.referenceImage.src) {
+                el.imageFileInput.click();
+            } else {
+                toggleReferenceLayerOrder();
+            }
+        }
+        // Arrow key nudging for last stroke
+        if (["arrowup","arrowdown","arrowleft","arrowright"].includes(key)) {
+            const last = state.paths[state.paths.length - 1];
+            if (!last) return;
+
+            const step = event.shiftKey ? 10 : 1;
+
+            let dx = 0, dy = 0;
+            if (key === "arrowup") dy = -step;
+            if (key === "arrowdown") dy = step;
+            if (key === "arrowleft") dx = -step;
+            if (key === "arrowright") dx = step;
+
+            for (const p of last.points) {
+                p.x += dx;
+                p.y += dy;
+            }
+
+            renderAll();
+            event.preventDefault();
+            return;
+        }
+
+
+        if (event.key === "[") {
+            if (state.tool === "eraser") {
+                state.eraserRadius = Math.max(8, state.eraserRadius - 2);
+            } else {
+                state.markerSize = Math.max(1, state.markerSize - 1);
+            }
+            syncControlValues();
+            renderPreview();
+        }
+        if (event.key === "]") {
+            if (state.tool === "eraser") {
+                state.eraserRadius = Math.min(200, state.eraserRadius + 2);
+            } else {
+                state.markerSize = Math.min(32, state.markerSize + 1);
+            }
+            syncControlValues();
+            renderPreview();
+        }
+    });
+
+    
+    document.addEventListener("keyup", (event) => {
+        if (event.key.toLowerCase() === "s") {
+            keySizingActive = false;
+        }
+        if (event.code === "Space") {
+            state.spacePanArmed = false;
+            el.canvasWrap.classList.remove("spacepan");
+        }
+    });
+
+    window.addEventListener("resize", fitCanvasStage);
+
+// ---------- Init ----------
+    state.referenceImage.opacity = Number(el.imageOpacity.value) / 100;
+    syncColorUiFromActiveColor();
+    syncControlValues();
+    rememberCustomColor(state.activeColor);
+    applyCamera();
+    fitCanvasStage();
+    saveState();
+    setTool("draw");
+    renderColorCanvas();
+    renderAll();
+    setStatus("Ready.", "good");
+})();
+</script>
+</body>
+</html>
